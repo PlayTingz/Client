@@ -1,22 +1,31 @@
 {% extends 'base.html' %}
 
+{% block title %}Enter Prompt to Create a Game{% endblock %}
+
 {% block header %}
-  <h1>{% block title %}Enter Prompt to Create a Game{% endblock %}</h1>
+  <h1 class="text-2xl font-semibold text-blue-700">Enter Prompt to Create a Game</h1>
 {% endblock %}
 
 {% block content %}
-  <form method="post">
-    <label for="prompt">Enter Prompt</label>
-    <input name="prompt" id="prompt" required>
-    <input type="submit" value="Prompt">
+  <form method="post" class="space-y-4">
+    <div>
+      <label for="prompt" class="block text-sm font-medium text-gray-700">Enter Prompt</label>
+      <input name="prompt" id="prompt" required
+             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" />
+    </div>
+    <div>
+      <input type="submit" value="Prompt"
+             class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 cursor-pointer" />
+    </div>
   </form>
-  <article class="prompt">
+
+  {% if data %}
+    <article class="mt-6 p-4 border border-gray-200 rounded bg-gray-50">
       <header>
-        {% if data %}
-            <h1>{{ data['prompt'] }}</h1>
-            <hr>
-            <p class="body">{{ data['answer'] }}</p>
-        {% endif %}
+        <h2 class="text-xl font-semibold text-gray-800">{{ data['prompt'] }}</h2>
+        <hr class="my-2">
+        <p class="whitespace-pre-line text-gray-700">{{ data['answer'] }}</p>
       </header>
     </article>
+  {% endif %}
 {% endblock %}
