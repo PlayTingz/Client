@@ -7,13 +7,19 @@ Client interface using MCP
     ```bash
     python -m venv .venv
     source .venv/bin/activate
+    pip freeze > requirements.txt
+    pip install -r requirements.txt
+    python ./src/app.py
     ```
     or
     ```bash
     python -m venv .venv
     source .venv/Scripts/activate
+    pip freeze > requirements.txt
+    pip install -r requirements.txt
+    python ./src/app.py
     ```
- - Setup Flask
+ - Setup Flask for containerization (optional)
  - use pip to freeze dependencies
     This script gets dependencies installed and stores them in requirements text file
     ```bash
