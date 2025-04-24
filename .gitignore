@@ -1,0 +1,10 @@
+venv
+.venv
+kubernetes
+client
+
+.env
+venv
+/.venv
+/kubernetes
+/client

@@ -1,0 +1,17 @@
+version: "3.9"
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: playtingz-client-api:1.0
+    env_file:
+    - ./src/.env
+    ports:
+    - "80:5000"
+    restart: always
+    networks:
+    - playtingz-client-api
+
+networks:
+  playtingz-client-api:

@@ -1,0 +1,7 @@
+.venv
+kubernetes
+client-api
+
+/.venv
+/kubernetes
+/client-api

@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}Enter Prompt to Create a Game{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  <form method="post">
+    <label for="prompt">Enter Prompt</label>
+    <input name="prompt" id="prompt" required>
+    <input type="submit" value="Prompt">
+  </form>
+{% endblock %}
