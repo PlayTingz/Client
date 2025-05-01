@@ -14,7 +14,7 @@ class AnthropicClient:
             model="claude-3-7-sonnet-20250219",
             max_tokens=1024,
             messages=[
-                {"role": "user", "content": f"Hello, Claude : {clientMsg}"}
+                {"role": "user", "content": f"Hello, Claude, you are a senior unity game programmer and i want you to : {clientMsg}"}
             ]
         )
         return message.content

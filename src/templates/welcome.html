@@ -15,7 +15,7 @@
     </div>
     <div>
       <input type="submit" value="Prompt"
-             class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 cursor-pointer" />
+            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 cursor-pointer" />
     </div>
   </form>
 
@@ -24,8 +24,23 @@
       <header>
         <h2 class="text-xl font-semibold text-gray-800">{{ data['prompt'] }}</h2>
         <hr class="my-2">
-        <p class="whitespace-pre-line text-gray-700">{{ data['answer'] }}</p>
+        <div class="prose max-w-none text-gray-800">{{ data['answer'] | safe }}</div>
       </header>
     </article>
   {% endif %}
+{% endblock %}
+
+{% block script %}
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const form = document.querySelector("form");
+      const submitBtn = form.querySelector("input[type='submit']");
+
+      form.addEventListener("submit", function () {
+        submitBtn.disabled = true;
+        submitBtn.value = "Playtingz is thinking...";
+        submitBtn.classList.add("opacity-60", "cursor-not-allowed");
+      });
+    });
+  </script>
 {% endblock %}

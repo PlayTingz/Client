@@ -3,6 +3,8 @@ import functools
 from flask import (
     Blueprint, flash, g, redirect, render_template, request, session, url_for
 )
+import markdown
+from markupsafe import Markup
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from ai.anthropicClient import AnthropicClient
@@ -23,10 +25,9 @@ def index():
             anthropic = AnthropicClient()
             # pass prompt to service to initiate MCP-Protocol action in unity
             answer = anthropic.prompt(prompt)
-            print(answer)
-            data = {
-                'answer': answer,
-                'prompt': prompt
-            }
+            # If message.content is a list of TextBlock-like objects
+            full_text = "\n\n".join(block.text for block in answer if hasattr(block, "text"))
+            html_answer = Markup(markdown.markdown(full_text))  # convert markdown to HTML
+            data = {"prompt": prompt, "answer": html_answer}
             return render_template('welcome.html', data=data)
     return render_template('welcome.html')
