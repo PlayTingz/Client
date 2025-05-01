@@ -5,12 +5,13 @@ from flask import (
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from ai.anthropicClient import AnthropicClient
+
 HomeBp = Blueprint('home', __name__, template_folder='templates')
 
 @HomeBp.route('/', methods=(['GET', 'POST']))
 def index():
     if request.method == 'POST':
-        print('Home')
         prompt = request.form['prompt']
         error = None
         if not prompt:
@@ -18,8 +19,11 @@ def index():
         if error is not None:
             flash(error)
         else:
+            #use anthropic 
+            anthropic = AnthropicClient()
             # pass prompt to service to initiate MCP-Protocol action in unity
-            answer = "MCP-Generated Answer"
+            answer = anthropic.prompt(prompt)
+            print(answer)
             data = {
                 'answer': answer,
                 'prompt': prompt
