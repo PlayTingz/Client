@@ -5,6 +5,7 @@ load_dotenv()
 
 # MCP API credentials
 MCP_API_KEY = os.getenv('MCP_API_KEY')
+UNITY_MCP_SERVER_DIR = os.getenv('UNITY_MCP_SERVER_DIR')
 
 class Config:
     DEVELOPMENT = True

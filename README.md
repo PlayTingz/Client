@@ -1,34 +1,17 @@
 # PlayTingz Client
 
 Client interface using MCP
- - Install Python 3.x
- - Create Python venv
- - Setup Flask
-    ```bash
-    python -m venv .venv
-    source .venv/bin/activate
-    pip freeze > requirements.txt
-    pip install -r requirements.txt
-    python ./src/app.py
-    ```
-    or
-    ```bash
-    python -m venv .venv
-    source .venv/Scripts/activate
-    pip freeze > requirements.txt
-    pip install -r requirements.txt
-    python ./src/app.py
-    ```
- - Setup Flask for containerization (optional)
- - use pip to freeze dependencies
-    This script gets dependencies installed and stores them in requirements text file
-    ```bash
-    (.venv) chukwuyenum@Yenums-MBP playtingz-client % pip freeze > requirements.txt
-    ```
-    This script gets list of dependencies from requirements text file and installs them into flask app
-    ```bash
-    (.venv) chukwuyenum@Yenums-MBP playtingz-client % pip install -r requirements.txt
-    ```
+ - Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
+ - Install python 3.13
+   ```bash
+   uv python install 3.13
+   ```
+ - Install dependencies  
+   
+   ```bash
+   uv python install 3.13
+   ```
+
  - build docker image using Dockerfile
 
     ```bash
@@ -67,3 +50,14 @@ Client interface using MCP
     pip3 install Flask-SQLAlchemy --upgrade
     pip3 install SQLAlchemy --upgrade
     ```
+   
+## Chat Interface
+
+To run the chat interface, make sure to 
+- install the [UnityMCPBridge](https://github.com/justinpbarnett/unity-mcp) (follow instructions)
+- have unity running with the bridge active
+- add location of the UnityMCPServer to the ``.env`` file. (Should be `"C:\\Users\\<USERNAME>\\AppData\\Local\\Programs\\UnityMCP\\UnityMcpServer\\src"`)
+- add Anthropic API Key to ``.env`` file.
+
+Then you should be able to run
+``uv run src/client.py``

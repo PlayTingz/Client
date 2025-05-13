@@ -1,6 +1,8 @@
 import asyncio
+import os
 from typing import Optional
 from contextlib import AsyncExitStack
+from config import UNITY_MCP_SERVER_DIR
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -21,17 +23,16 @@ class MCPClient:
         """Connect to an MCP server
         
         Args:
-            server_script_path: Path to the server script (.py or .js)
+            server_script_path: Path to the server script .py
         """
-        is_python = server_script_path.endswith('.py')
-        is_js = server_script_path.endswith('.js')
-        if not (is_python or is_js):
-            raise ValueError("Server script must be a .py or .js file")
-            
-        command = "python" if is_python else "node"
         server_params = StdioServerParameters(
-            command=command,
-            args=[server_script_path],
+            command="uv",
+            args=[
+                "--directory",
+                server_script_path,
+                "run",
+                "server.py"
+            ],
             env=None
         )
         
@@ -131,13 +132,9 @@ class MCPClient:
         await self.exit_stack.aclose()
 
 async def main():
-    if len(sys.argv) < 2:
-        print("Usage: python client.py <path_to_server_script>")
-        sys.exit(1)
-        
     client = MCPClient()
     try:
-        await client.connect_to_server(sys.argv[1])
+        await client.connect_to_server(UNITY_MCP_SERVER_DIR)
         await client.chat_loop()
     finally:
         await client.cleanup()
