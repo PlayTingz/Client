@@ -1,6 +1,6 @@
 # PlayTingz Client
 
-Client interface using MCP
+## Setup
  - Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
  - Install python 3.13
    ```bash
@@ -9,55 +9,40 @@ Client interface using MCP
  - Install dependencies  
    
    ```bash
-   uv python install 3.13
+   uv sync
    ```
-
- - build docker image using Dockerfile
-
-    ```bash
-    (.venv) chukwuyenum@Yenums-MBP playtingz-client % docker build -t playtingz-client:1.0 .
-    (.venv) chukwuyenum@Yenums-MBP playtingz-client % docker run -d -p 80:5000 --name api playtingz-client:1.0
-    (.venv) chukwuyenum@Yenums-MBP playtingz-client % docker ps
-    (.venv) chukwuyenum@Yenums-MBP playtingz-client % docker rm -f api
-    ```
- - write Docker compose file
- - build docker with docker-compose
-
-    ```bash
-    (.venv) chukwuyenum@Yenums-MBP playtingz-client % docker-compose build
-    (.venv) chukwuyenum@Yenums-MBP playtingz-client % docker-compose up -d
-    (.venv) chukwuyenum@Yenums-MBP playtingz-client % docker-compose down
-    ```
- - Set up kubernetes (optional)
-
-    ```bash
-    (.venv) chukwuyenum@Yenums-MBP kubernetes % kubectl apply -f deployment.yml
-    (.venv) chukwuyenum@Yenums-MBP kubernetes % kubectl get po, svc
-    (.venv) chukwuyenum@Yenums-MBP kubernetes % kubectl delete -f
-    ```
- - Set up helms (optional)
-
-    ```bash
-    (.venv) chukwuyenum@Yenums-MBP playtingz-client % helm create playtingz-client-api
-    Creating playtingz-client-api
-    (.venv) chukwuyenum@Yenums-MBP playtingz-client % cd playtingz-client-api
-    (.venv) chukwuyenum@Yenums-MBP playtingz-client-api % helm install playtingz-client-api .
-    (.venv) chukwuyenum@Yenums-MBP playtingz-client-api % helm uninstall playtingz-client-api
-    ```
-
- - Fixing SQLAlchemy issue (optional)
-    ```bash
-    pip3 install Flask-SQLAlchemy --upgrade
-    pip3 install SQLAlchemy --upgrade
-    ```
-   
-## Chat Interface
-
-To run the chat interface, make sure to 
-- install the [UnityMCPBridge](https://github.com/justinpbarnett/unity-mcp) (follow instructions)
-- have unity running with the bridge active
-- add location of the UnityMCPServer to the ``.env`` file. (Should be `"C:\\Users\\<USERNAME>\\AppData\\Local\\Programs\\UnityMCP\\UnityMcpServer\\src"`)
 - add Anthropic API Key to ``.env`` file.
 
-Then you should be able to run
-``uv run src/client.py``
+
+To interact with a unity project, make sure to
+- install the [UnityMCPBridge](https://github.com/justinpbarnett/unity-mcp) (follow instructions)
+- add location of the installed UnityMCPServer to the ``.env`` file. (Should be `"C:\\Users\\<USERNAME>\\AppData\\Local\\Programs\\UnityMCP\\UnityMcpServer\\src"`)
+
+## Running the Client
+
+You can run the client either using docker, or directly using ``uv``.
+
+- **Docker:**
+    ```bash
+    docker build -t playtingz-client:1.0 .
+    docker run -d -p 80:5000 --name api playtingz-client:1.0
+    ```
+ 
+    ```bash
+    docker-compose build
+    docker-compose up -d
+    ```
+- **uv**
+  ````
+  uv run src/app.py  
+  ````
+
+**NOTE**: A Unity Instance with the MCP Bridge active must be running.
+
+### Chat CLI Interface
+
+If you just want a simple command line interface instead of a webapp, run:
+
+```bash
+uv run src/client.py
+```
