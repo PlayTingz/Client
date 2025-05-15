@@ -1,47 +1,85 @@
 # PlayTingz Client
 
-## Setup
- - Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
- - Install python 3.13
+A powerful client for creating Unity Games through the PlayTingz interface.
+
+## ✨ Features
+
+- Unity Game creation with LLMs
+- Web interface for interactive development
+- Command-line interface for quick interactions
+- Docker support for containerized deployment
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- [uv package manager](https://docs.astral.sh/uv/getting-started/installation/)
+- Python 3.13
+- [UnityMCPBridge](https://github.com/justinpbarnett/unity-mcp) (for Unity project integration)
+- Anthropic API key
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/playtingz-client.git
+   cd playtingz-client
+   ```
+
+2. Install Python 3.13:
    ```bash
    uv python install 3.13
    ```
- - Install dependencies  
-   
+
+3. Install dependencies:
    ```bash
    uv sync
    ```
-- add Anthropic API Key to ``.env`` file.
 
+4. Create a `.env` file in the project root and add:
+   ```
+   ANTHROPIC_API_KEY=your_api_key_here
+   UNITY_MCP_SERVER_PATH="C:\\Users\\<USERNAME>\\AppData\\Local\\Programs\\UnityMCP\\UnityMcpServer\\src"
+   ```
+   See ``src/.env.example`` for a complete list of fields.
 
-To interact with a unity project, make sure to
-- install the [UnityMCPBridge](https://github.com/justinpbarnett/unity-mcp) (follow instructions)
-- add location of the installed UnityMCPServer to the ``.env`` file. (Should be `"C:\\Users\\<USERNAME>\\AppData\\Local\\Programs\\UnityMCP\\UnityMcpServer\\src"`)
+### Unity Integration Setup
 
-## Running the Client
+1. Install the [UnityMCPBridge](https://github.com/justinpbarnett/unity-mcp) following their installation instructions
+2. Add the location of the installed UnityMCPServer to your `.env` file.
+3. Make sure to have a Unity instance with the MCP Bridge active when running the client
 
-You can run the client either using docker, or directly using ``uv``.
+## 🖥️ Running the Client
 
-- **Docker:**
-    ```bash
-    docker build -t playtingz-client:1.0 .
-    docker run -d -p 80:5000 --name api playtingz-client:1.0
-    ```
- 
-    ```bash
-    docker-compose build
-    docker-compose up -d
-    ```
-- **uv**
-  ````
-  uv run src/app.py  
-  ````
+> **IMPORTANT**: A Unity Instance with the MCP Bridge active must be running for any client mode.
 
-**NOTE**: A Unity Instance with the MCP Bridge active must be running.
+### Web Interface
 
-### Chat CLI Interface
+You can run the client either using Docker or directly with `uv`.
 
-If you just want a simple command line interface instead of a webapp, run:
+#### Using Docker
+
+Option 1:
+```bash
+docker build -t playtingz-client:1.0 .
+docker run -d -p 80:5000 --name api playtingz-client:1.0
+```
+
+Option 2:
+```bash
+docker-compose build
+docker-compose up -d
+```
+
+#### Using uv
+
+```bash
+uv run src/app.py
+```
+
+### Command Line Interface
+
+For a simple CLI experience:
 
 ```bash
 uv run src/client.py
