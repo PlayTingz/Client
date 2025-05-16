@@ -1,30 +1,31 @@
 {% extends 'base.html' %}
 
-{% block title %}Enter Prompt to Create a Game{% endblock %}
+{% block title %}What will you create today ?{% endblock %}
 
 {% block header %}
-  <h1 class="text-2xl font-semibold text-blue-700">Enter Prompt to Create a Game</h1>
+  <h1 class="text-2xl font-semibold text-gray-100">What will you create today ?</h1>
 {% endblock %}
 
 {% block content %}
   <form method="post" class="space-y-4">
     <div>
-      <label for="prompt" class="block text-sm font-medium text-gray-700">Enter Prompt</label>
       <input name="prompt" id="prompt" required
-             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" />
+             class="mt-1 bg-gray-700 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" />
     </div>
-    <div>
-      <input type="submit" value="Prompt"
+    <div class="flex justify-end">
+      <input type="submit" value="Generate"
             class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 cursor-pointer" />
     </div>
   </form>
 
   {% if data %}
-    <article class="mt-6 p-4 border border-gray-200 rounded bg-gray-50">
+    <article class="mt-6 p-4 border border-gray-700 0 rounded bg-gray-900">
       <header>
-        <h2 class="text-xl font-semibold text-gray-800">{{ data['prompt'] }}</h2>
+        <h2 class="text-xl font-semibold text-white">{{ data['prompt'] }}</h2>
         <hr class="my-2">
-        <div class="prose max-w-none text-gray-800">{{ data['answer'] | safe }}</div>
+        <div class="prose max-w-none text-white h-128 overflow-y-auto">
+          {{ data['answer'] | safe }}
+        </div>
       </header>
     </article>
   {% endif %}

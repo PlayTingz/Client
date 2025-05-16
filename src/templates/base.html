@@ -5,24 +5,52 @@
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
   <title>{% block title %}{% endblock %} - Play Tingz Client</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      background: 
+      url("{{ url_for('static', filename='img/bg.png') }}") center center no-repeat,
+rgb(13, 24, 35); /* fallback or edge filler */
+    background-size: auto;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 text-gray-900 font-sans">
+<body class="bg-gray-900 text-gray-900 font-sans">
+  
 
-<nav class="bg-white shadow-md mb-4">
-  <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-    <h1 class="text-xl font-bold text-blue-600">Play Tingz Client</h1>
-    <ul class="flex space-x-4">
-      {% if g.user %}
-        <li><span class="font-semibold">{{ g.user['username'] }}</span></li>
-        <li><a href="{{ url_for('home.index') }}" class="text-blue-500 hover:underline">Log Out</a></li>
-      {% else %}
-        <li><a href="{{ url_for('home.index') }}" class="text-blue-500 hover:underline">Home</a></li>
-      {% endif %}
-    </ul>
-  </div>
-</nav>
+<!-- NAVIGATION BAR -->
+  <nav class="relative z-10 mt-8 mb-4">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+      
+      <!-- LEFT: Site Title -->
+      <div class="text-xl font-bold text-blue-600 flex items-center space-x-2">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="w-32 h-8">
+      </div>
 
-<section class="max-w-3xl mx-auto px-4 py-6 bg-white rounded-lg shadow">
+
+      <!-- RIGHT: Docs, GitHub, User Info -->
+      <div class="flex items-center space-x-4">
+        <a href="https://your-docs-url.com" class="text-gray-100 hover:underline">Docs</a>
+        <a href="https://github.com/your-repo" class="text-gray-100 hover:underline">GitHub</a>
+
+        {% if g.user %}
+          <span class="font-semibold">{{ g.user['username'] }}</span>
+          <a href="{{ url_for('home.index') }}" class="text-gray-100 hover:underline">Log Out</a>
+        {% else %}
+          <a href="{{ url_for('home.index') }}" class="text-gray-100  hover:underline">Home</a>
+        {% endif %}
+
+        <!-- Optional: Avatar -->
+        <img src="{{ url_for('static', filename='img/moon.png') }}" alt="User" class="w-6 h-6 rounded">
+      </div>
+    </div>
+  </nav>
+
+<section class="max-w-3xl mx-auto mt-16 px-4 py-6 bg-gray-900 rounded-lg shadow">
   <header class="mb-6">
     {% block header %}{% endblock %}
   </header>
