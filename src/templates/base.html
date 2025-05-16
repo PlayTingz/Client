@@ -28,23 +28,23 @@ rgb(13, 24, 35); /* fallback or edge filler */
       
       <!-- LEFT: Site Title -->
       <div class="text-xl font-bold text-blue-600 flex items-center space-x-2">
-        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="w-32 h-8">
+        <a href="{{ url_for('home.index') }}" class="text-gray-100"><img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="w-32 h-8"></a>
       </div>
 
 
       <!-- RIGHT: Docs, GitHub, User Info -->
       <div class="flex items-center space-x-4">
-        <a href="https://www.playtingz.com/" class="text-gray-100 hover:underline">Docs</a>
-        <a href="https://github.com/PlayTingz" class="text-gray-100 hover:underline">GitHub</a>
+        <a href="https://www.playtingz.com/" class="text-gray-100 text-sm hover:text-xl"  target="_blank" rel="noopener noreferrer">Docs</a>
+        <a href="https://github.com/PlayTingz" class="text-gray-100 text-sm hover:text-xl" target="_blank" rel="noopener noreferrer">GitHub</a>
 
         {% if g.user %}
           <span class="font-semibold">{{ g.user['username'] }}</span>
-          <a href="{{ url_for('home.index') }}" class="text-gray-100 hover:underline">Log Out</a>
+          <a href="{{ url_for('home.index') }}" class="text-gray-100 text-sm hover:text-xl">Log Out</a>
         {% else %}
-          <a href="{{ url_for('home.index') }}" class="text-gray-100  hover:underline">Home</a>
+          <a href="{{ url_for('home.index') }}" class="text-gray-100 text-sm hover:text-xl">Home</a>
         {% endif %}
 
-        <!-- Optional: Avatar -->
+        <!-- Optional: Toggle Theme Moon -->
         <img src="{{ url_for('static', filename='img/moon.png') }}" alt="User" class="w-6 h-6 rounded">
       </div>
     </div>
