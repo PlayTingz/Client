@@ -1,25 +1,29 @@
 {% extends 'base.html' %}
 
-{% block title %}What will you create today ?{% endblock %}
+{% block title %}WHAT WILL YOU CREATE TODAY?{% endblock %}
 
 {% block header %}
-  <h1 class="text-2xl font-semibold text-gray-100">What will you create today ?</h1>
 {% endblock %}
 
 {% block content %}
-  <form method="post" class="space-y-4">
-    <div>
-      <input name="prompt" id="prompt" required
-             class="mt-1 bg-gray-700 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" />
-    </div>
-    <div class="flex justify-end">
-      <input type="submit" value="Generate"
-            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 cursor-pointer" />
-    </div>
-  </form>
+  <section class="mx-auto max-w-7xl h-96 gap-6 pt-80 pr-40 pb-80 pl-40 backdrop-blur-xl shadow-xl bg-white/5 border border-white/30 rounded-xl">
+      <header class="mb-6">
+        <h1 class="max-w-5xl h-9 gap-2.5 text-2xl font-semibold text-white">WHAT WILL YOU CREATE TODAY?</h1>
+      </header>
+      <form method="post" class="space-y-4">
+        <div>
+          <input name="prompt" id="prompt" placeholder="_" required
+                 class="text-white mt-1 p-2 w-full backdrop-blur-xl shadow-xl bg-white/5 border border-white/30 rounded-xl shadow focus:outline-none focus:ring-blue-500 focus:border-blue-500" />
+        </div>
+        <div class="flex justify-end">
+          <input type="submit" value="Generate"
+                class="text-white h-12 gap-2.5 rounded-lg px-3 bg-blue-600 hover:bg-blue-700 cursor-pointer" />
+        </div>
+      </form>
+  </section>
 
   {% if data %}
-    <article class="mt-6 p-4 border border-gray-700 0 rounded bg-gray-900">
+    <article class="mx-auto mt-6 p-4 max-w-7xl h-96 gap-6 rounded-2xl border p-6 px-40 bg-white/5 border-white/30 backdrop-blur-xl shadow-xl">
       <header>
         <h2 class="text-xl font-semibold text-white">{{ data['prompt'] }}</h2>
         <hr class="my-2">

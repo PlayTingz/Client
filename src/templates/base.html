@@ -6,23 +6,56 @@
   <title>{% block title %}{% endblock %} - Play Tingz Client</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+
+  @font-face {
+       font-family: 'Geist';
+       src: url("{{ url_for('static', filename='fonts/Geist-Light.ttf') }}") format('truetype');
+       font-weight: 300;
+       font-style: normal;
+    }
+
+    @font-face {
+       font-family: 'Geist';
+       src: url("{{ url_for('static', filename='fonts/Geist-Regular.ttf') }}") format('truetype');
+       font-weight: 400;
+       font-style: normal;
+    }
+
+  @font-face {
+       font-family: 'Geist';
+       src: url("{{ url_for('static', filename='fonts/Geist-SemiBold.ttf') }}") format('truetype');
+       font-weight: 600;
+       font-style: normal;
+    }
+
     html, body {
       height: 100%;
       margin: 0;
+      width: 100%;
+
+
+      font-family: "Geist", sans-serif;
+      font-optical-sizing: auto;
+      font-weight: 400;
+      font-style: normal;
     }
 
-    body {
-      background: 
-      url("{{ url_for('static', filename='img/bg.png') }}") center center no-repeat,
-rgb(13, 24, 35); /* fallback or edge filler */
-    background-size: auto;
-    }
+body {
+  background:
+    url("{{ url_for('static', filename='img/bg.png') }}") center center no-repeat,
+    rgb(13, 24, 35); /* fallback or edge filler */
+  background-size: auto; /* keeps the image at its original size */
+  background-attachment: fixed; /* keeps the background fixed when scrolling */
+  min-height: 100vh; /* ensures the body is at least as tall as the viewport */
+  overflow-x: hidden; /* prevents horizontal scrolling if desired */
+}
   </style>
 </head>
-<body class="bg-gray-900 text-gray-900 font-sans">
+<body class="min-h-screen bg-gray-900 text-gray-900 font-sans">
   
 
 <!-- NAVIGATION BAR -->
+
   <nav class="relative z-10 mt-8 mb-4">
     <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
       
@@ -45,15 +78,11 @@ rgb(13, 24, 35); /* fallback or edge filler */
         {% endif %}
 
         <!-- Optional: Toggle Theme Moon -->
-        <img src="{{ url_for('static', filename='img/moon.png') }}" alt="User" class="w-6 h-6 rounded">
+        <!--<img src="{{ url_for('static', filename='img/moon.png') }}" alt="User" class="w-6 h-6 rounded">-->
       </div>
     </div>
   </nav>
-
-<section class="max-w-3xl mx-auto mt-16 px-4 py-6 bg-gray-900 rounded-lg shadow">
-  <header class="mb-6">
-    {% block header %}{% endblock %}
-  </header>
+  {% block header %}{% endblock %}
   {% for message in get_flashed_messages() %}
     <div class="mb-4 p-4 bg-blue-100 border-l-4 border-blue-500 text-blue-700 rounded">
       {{ message }}
@@ -61,7 +90,6 @@ rgb(13, 24, 35); /* fallback or edge filler */
   {% endfor %}
   {% block content %}{% endblock %}
   {% block script %}{% endblock %}
-</section>
 
 </body>
 </html>
