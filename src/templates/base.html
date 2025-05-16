@@ -59,7 +59,7 @@ body {
 <!-- NAVIGATION BAR -->
 
   <nav class="relative z-10 mt-8 mb-4">
-    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+    <div class="geist max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
       
       <!-- LEFT: Site Title -->
       <div class="text-xl font-bold text-blue-600 flex items-center space-x-2">
@@ -68,7 +68,7 @@ body {
 
 
       <!-- RIGHT: Docs, GitHub, User Info -->
-      <div class="flex items-center space-x-4">
+      <div class="geist flex items-center space-x-4">
         <a href="https://www.playtingz.com/" class="text-gray-100 text-sm hover:text-xl"  target="_blank" rel="noopener noreferrer">Docs</a>
         <a href="https://github.com/PlayTingz" class="text-gray-100 text-sm hover:text-xl" target="_blank" rel="noopener noreferrer">GitHub</a>
 
@@ -86,7 +86,7 @@ body {
   </nav>
   {% block header %}{% endblock %}
   {% for message in get_flashed_messages() %}
-    <div class="mb-4 p-4 bg-blue-100 border-l-4 border-blue-500 text-blue-700 rounded">
+    <div class="geist mb-4 p-4 bg-blue-100 border-l-4 border-blue-500 text-blue-700 rounded">
       {{ message }}
     </div>
   {% endfor %}

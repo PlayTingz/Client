@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}WHAT WILL YOU CREATE TODAY?{% endblock %}
+{% block title %}What will you create today?{% endblock %}
 
 {% block header %}
 {% endblock %}
@@ -8,7 +8,7 @@
 {% block content %}
   <section class="geist mx-auto max-w-7xl h-96 gap-6 pt-40 pr-40 pb-64 pl-40 backdrop-blur-xl shadow-xl bg-white/5 border border-white/30 rounded-xl">
       <header class="mb-6">
-        <h1 style="font-weight: 600" class="max-w-5xl h-9 gap-2.5 text-2xl text-white">WHAT WILL YOU CREATE TODAY?</h1>
+        <h1 style="font-weight: 600" class="max-w-5xl h-9 gap-2.5 text-3xl text-white">What will you create today?</h1>
       </header>
       <form method="post" class="space-y-4">
         <div>
@@ -25,9 +25,9 @@
   {% if data %}
     <article class="geist mx-auto mt-6 p-4 max-w-7xl h-96 gap-6 rounded-2xl border p-6 px-40 bg-white/5 border-white/30 backdrop-blur-xl shadow-xl">
       <header>
-        <h2 class="text-xl font-semibold text-white">{{ data['prompt'] }}</h2>
+        <h2 class="geist text-xl font-semibold text-white">{{ data['prompt'] }}</h2>
         <hr class="my-2">
-        <div class="prose max-w-none text-white h-128 overflow-y-auto">
+        <div class="geist prose max-w-none text-white h-128 overflow-y-auto">
           {{ data['answer'] | safe }}
         </div>
       </header>
