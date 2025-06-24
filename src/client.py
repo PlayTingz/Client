@@ -9,7 +9,7 @@ from langgraph.prebuilt import create_react_agent
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-from config import UNITY_MCP_SERVER_DIR
+from config import UNITY_MCP_SERVER_DIR, get_model
 
 load_dotenv()  # load environment variables from .env
 
@@ -27,7 +27,6 @@ class MCPClient:
             env=None
         )
 
-        # Manual open/close instead of context manager
         read, write = await self.exit_stack.enter_async_context(stdio_client(server_params))
         self.session = await self.exit_stack.enter_async_context(ClientSession(read, write))
         await self.session.initialize()
@@ -35,7 +34,7 @@ class MCPClient:
         tools = await load_mcp_tools(self.session)
 
         self.agent = create_react_agent(
-            model="openai:o4-mini",
+            model=get_model(),
             tools=tools,
             checkpointer=InMemorySaver()
         )
@@ -47,7 +46,6 @@ class MCPClient:
             {"messages": [HumanMessage(content=query)]},
             config
         )
-
         return result
 
     async def cleanup(self):

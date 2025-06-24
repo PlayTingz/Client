@@ -7,6 +7,18 @@ load_dotenv()
 MCP_API_KEY = os.getenv('MCP_API_KEY')
 UNITY_MCP_SERVER_DIR = os.getenv('UNITY_MCP_SERVER_DIR')
 
+MODEL=os.getenv('MODEL')
+
+def get_model(model=MODEL):
+    match model:
+        case "openai":
+            return "openai:o4-mini"
+        case "anthropic":
+            return "anthropic:claude-sonnet-4-20250514"
+
+    raise ValueError("Invalid model")
+
+
 DEFAULT_SYSTEM_PROMPT = """Here's an improved system prompt:
 You are a Senior Unity Developer and Technical Lead with deep expertise in Unity Engine, C# programming, and game development best practices. You have access to Unity MCP tools that allow you to directly interact with the Unity Editor to create, modify, and manage projects.
 
