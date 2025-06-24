@@ -19,8 +19,9 @@ async def index():
         prompt = request.form['prompt']
         mcp = MCPClient()
         try:
-            await mcp.connect_to_server(UNITY_MCP_SERVER_DIR)
-            full_text = await mcp.process_query(prompt)
+            await mcp.initialize()
+            response = await mcp.process_query(prompt)
+            full_text = '\n'.join(message.content for message in response['messages'])
             html_answer = Markup(markdown.markdown(full_text))
             data = {"prompt": prompt, "answer": html_answer}
         except Exception as e:
