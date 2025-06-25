@@ -14,7 +14,7 @@ A powerful client for creating Unity Games through the PlayTingz interface.
 ### Prerequisites
 
 - [uv package manager](https://docs.astral.sh/uv/getting-started/installation/)
-- Python 3.13
+- Python 3.10
 - [UnityMCPBridge](https://github.com/justinpbarnett/unity-mcp) (for Unity project integration)
 - Anthropic API key
 
@@ -26,9 +26,9 @@ A powerful client for creating Unity Games through the PlayTingz interface.
    cd playtingz-client
    ```
 
-2. Install Python 3.13:
+2. Install Python 3.10:
    ```bash
-   uv python install 3.13
+   uv python install 3.10
    ```
 
 3. Install dependencies:

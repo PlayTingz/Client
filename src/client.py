@@ -1,240 +1,195 @@
 import asyncio
-import os
-from typing import Optional, List, Dict, Any
 from contextlib import AsyncExitStack
-from config import UNITY_MCP_SERVER_DIR
+from typing import List, Any, Optional
 
+import httpx
+from dotenv import load_dotenv
+from langchain_core.messages import HumanMessage, BaseMessage
+from langchain_mcp_adapters.tools import load_mcp_tools
+from langchain_openai import ChatOpenAI
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.prebuilt import create_react_agent
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from openai import AsyncOpenAI, OpenAI
+from pydantic import Field
 
-from anthropic import Anthropic
-from dotenv import load_dotenv
+from config import UNITY_MCP_SERVER_DIR, MODEL_VENDOR, ZeroGConfig
 
-load_dotenv()  # load environment variables from .env
+load_dotenv()
+
+def get_model(vendor=MODEL_VENDOR):
+    match vendor:
+        case "openai":
+            return "openai:o4-mini"
+        case "anthropic":
+            return "anthropic:claude-sonnet-4-20250514"
+        case "zerog":
+            return ZeroGChat(model=ZeroGConfig.MODEL_NAME, base_url=ZeroGConfig.MODEL_ENDPOINT)
+
+    raise ValueError("Invalid model")
+
+
+class ZGServiceClient:
+    def __init__(self, url=None, provider_address=None):
+        self.url = url or ZeroGConfig.SERVICE_API_URL
+        self.provider_address = provider_address or ZeroGConfig.PROVIDER_ADDRESS
+        self.default_headers = {
+            'Content-Type': 'application/json',
+            'accept': 'application/json',
+        }
+
+    def _build_request_params(self, query: str):
+        return {
+            'url': self.url,
+            'json': {
+                'providerAddress': self.provider_address,
+                'query': query
+            },
+            'headers': self.default_headers.copy()
+        }
+
+
+    def _process_response(self, response):
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return {'success': False, 'response': response.content}
+
+
+    def get_headers(self, query: str):
+        params = self._build_request_params(query)
+        with httpx.Client() as client:
+            response = client.post(**params)
+            return self._process_response(response)
+
+
+    async def aget_headers(self, query: str):
+        params = self._build_request_params(query)
+        async with httpx.AsyncClient() as client:
+            response = await client.post(**params)
+            return self._process_response(response)
+
+
+class ZeroGChat(ChatOpenAI):
+    zg_client: Optional[ZGServiceClient] = Field(default=None, exclude=True)
+
+    def __init__(self, zg_client: Optional[ZGServiceClient] = None, *args, **kwargs):
+        kwargs.setdefault('model_name', ZeroGConfig.MODEL_NAME)
+        kwargs.setdefault('base_url', ZeroGConfig.MODEL_ENDPOINT)
+        kwargs.setdefault('api_key', '')
+
+        super().__init__(*args, **kwargs)
+
+        self.zg_client = zg_client or ZGServiceClient()
+
+
+    def _get_prompt_from_messages(self, messages: List[BaseMessage]) -> str:
+        """Extract prompt string from messages."""
+        return ' '.join([str(message.content) for message in messages])
+
+
+    def _process_headers_response(self, response):
+        """Process and validate headers response from ZeroG service."""
+        if not response.get('success', False):
+            error_msg = response.get('response', 'Unknown error')
+            raise RuntimeError(f'Failed to get headers: {error_msg}')
+
+        headers = response['response'].copy()  # Don't mutate original
+        headers["Authorization"] = "Bearer dummy-token"
+        return headers
+
+
+    def _create_openai_client(self, headers: dict, is_async: bool = False):
+        """Create OpenAI client with custom headers."""
+        client_class = AsyncOpenAI if is_async else OpenAI
+        return client_class(
+            base_url=self.openai_api_base,
+            api_key=self.openai_api_key,
+            default_headers=headers
+        )
+
+
+    def _get_sync_client(self, prompt: str):
+        """Get synchronous OpenAI client with ZG headers."""
+        response = self.zg_client.get_headers(prompt)
+        headers = self._process_headers_response(response)
+        return self._create_openai_client(headers, is_async=False)
+
+
+    async def _get_async_client(self, prompt: str):
+        """Get asynchronous OpenAI client with ZG headers."""
+        response = await self.zg_client.aget_headers(prompt)
+        headers = self._process_headers_response(response)
+        return self._create_openai_client(headers, is_async=True)
+
+
+    def _generate(
+        self,
+        messages: List[BaseMessage],
+        stop: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> Any:
+        prompt = self._get_prompt_from_messages(messages)
+        client = self._get_sync_client(prompt)
+        self.client = client.chat.completions
+        return super()._generate(messages, stop=stop, **kwargs)
+
+
+    async def _agenerate(
+        self,
+        messages: List[BaseMessage],
+        stop: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> Any:
+        prompt = self._get_prompt_from_messages(messages)
+        client = await self._get_async_client(prompt)
+        self.async_client = client.chat.completions
+        return await super()._agenerate(messages, stop=stop, **kwargs)
 
 
 class MCPClient:
     def __init__(self):
-        # Initialize session and client objects
-        self.session: Optional[ClientSession] = None
+        self.session = None
+        self.agent = None
         self.exit_stack = AsyncExitStack()
-        self.anthropic = Anthropic()
-        self.max_turns = 10
+        self.model = get_model()
 
-    async def connect_to_server(self, server_script_path: str):
-        """Connect to an MCP server
-
-        Args:
-            server_script_path: Path to the server script .py
-        """
+    async def initialize(self):
         server_params = StdioServerParameters(
             command="uv",
-            args=[
-                "--directory",
-                server_script_path,
-                "run",
-                "server.py"
-            ],
+            args=["--directory", UNITY_MCP_SERVER_DIR, "run", "server.py"],
             env=None
         )
 
-        stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params))
-        self.stdio, self.write = stdio_transport
-        self.session = await self.exit_stack.enter_async_context(ClientSession(self.stdio, self.write))
-
+        read, write = await self.exit_stack.enter_async_context(stdio_client(server_params))
+        self.session = await self.exit_stack.enter_async_context(ClientSession(read, write))
         await self.session.initialize()
 
-        # List available tools
-        response = await self.session.list_tools()
-        tools = response.tools
-        print("\nConnected to server with tools:", [tool.name for tool in tools])
+        tools = await load_mcp_tools(self.session)
 
-    async def process_query(self, query: str, system_prompt: str = None) -> str:
-        """Process a query using Claude and available tools with iterative tool calling"""
-        # Default system prompt if none provided
-        if system_prompt is None:
-            system_prompt = """Here's an improved system prompt:
-You are a Senior Unity Developer and Technical Lead with deep expertise in Unity Engine, C# programming, and game development best practices. You have access to Unity MCP tools that allow you to directly interact with the Unity Editor to create, modify, and manage projects.
+        self.agent = create_react_agent(
+            model=self.model,#get_model(),
+            tools=tools,
+            checkpointer=InMemorySaver()
+        )
 
-APPROACH:
-1. **Analyze & Plan**: Before taking action, carefully analyze the request and formulate a clear, step-by-step plan
-2. **Explain Your Reasoning**: Share your thought process and explain why you're choosing specific approaches
-3. **Execute Methodically**: Use tools systematically, explaining each step as you go
-4. **Adapt & Problem-Solve**: If issues arise, diagnose problems, explain what went wrong, and adjust your approach
+    async def process_query(self, query: str):
+        config = {"configurable": {"thread_id": "1"}}  # TODO: Thread Management
 
-TECHNICAL EXPERTISE:
-- Unity Editor workflows and project structure
-- C# scripting with Unity-specific patterns (MonoBehaviour, ScriptableObjects, etc.)
-- Scene management, GameObject hierarchies, and component systems
-- Asset management and optimization
-- Performance considerations and debugging
-- Modern Unity features and recommended practices
+        result = await self.agent.ainvoke(
+            {"messages": [HumanMessage(content=query)]},
+            config
+        )
+        return result
 
-COMMUNICATION STYLE:
-- Be clear and educational in explanations
-- Break down complex tasks into understandable steps
-- Provide context for your decisions and trade-offs
-- Offer alternative solutions when appropriate
-- Share relevant Unity tips and best practices
-
-When working with tools, always verify results and handle errors gracefully. Your goal is not just to complete tasks, but to help users understand Unity development concepts and improve their skills."""
-
-        messages = [
-            {
-                "role": "user",
-                "content": query
-            }
-        ]
-
-        response = await self.session.list_tools()
-        available_tools = [{
-            "name": tool.name,
-            "description": tool.description,
-            "input_schema": tool.inputSchema
-        } for tool in response.tools]
-
-        final_text = []
-        iteration = 0
-
-        while iteration < self.max_turns:
-            print(f"\n--- Iteration {iteration + 1} ---")
-
-            # Make Claude API call
-            # Only enable thinking for the first iteration to avoid message structure issues
-            if iteration == 0:
-                response = self.anthropic.messages.create(
-                    model="claude-sonnet-4-20250514",
-                    system=system_prompt,
-                    thinking={
-                        "type": "enabled",
-                        "budget_tokens": 10000
-                    },
-                    extra_headers={
-                        "anthropic-beta": "interleaved-thinking-2025-05-14"
-                    },
-                    max_tokens=16000,
-                    messages=messages,
-                    tools=available_tools
-                )
-            else:
-                # For subsequent iterations, disable thinking to avoid message structure complications
-                response = self.anthropic.messages.create(
-                    model="claude-sonnet-4-20250514",
-                    system=system_prompt,
-                    max_tokens=16000,
-                    messages=messages,
-                    tools=available_tools
-                )
-
-            # Track if we found any tool calls in this iteration
-            has_tool_calls = False
-            assistant_content = []
-
-            # Process Claude's response
-            tool_results = []
-
-            for content in response.content:
-                if content.type == 'text':
-                    assistant_content.append({
-                        "type": "text",
-                        "text": content.text
-                    })
-                    if iteration == 0 or not has_tool_calls:  # Only add to final text if it's the first iteration or no tool calls
-                        final_text.append(content.text)
-                elif content.type == 'tool_use':
-                    has_tool_calls = True
-                    assistant_content.append({
-                        "type": "tool_use",
-                        "id": content.id,
-                        "name": content.name,
-                        "input": content.input
-                    })
-
-                    tool_name = content.name
-                    tool_args = content.input
-
-                    print(f"Calling tool: {tool_name} with args: {tool_args}")
-
-                    # Execute tool call
-                    try:
-                        result = await self.session.call_tool(tool_name, tool_args)
-                        tool_result_content = result.content
-
-                        # Store tool result for user message
-                        tool_results.append({
-                            "type": "tool_result",
-                            "tool_use_id": content.id,
-                            "content": tool_result_content
-                        })
-
-                        print(
-                            f"Tool result: {tool_result_content[:200]}{'...' if len(str(tool_result_content)) > 200 else ''}")
-
-                    except Exception as e:
-                        print(f"Error executing tool {tool_name}: {str(e)}")
-                        # Store error as tool result
-                        tool_results.append({
-                            "type": "tool_result",
-                            "tool_use_id": content.id,
-                            "content": f"Error: {str(e)}",
-                            "is_error": True
-                        })
-
-            # Add assistant's response to conversation history (without tool results)
-            if assistant_content:
-                messages.append({
-                    "role": "assistant",
-                    "content": assistant_content
-                })
-
-            # Add tool results as user message if there were any tool calls
-            if tool_results:
-                messages.append({
-                    "role": "user",
-                    "content": tool_results
-                })
-
-            # If no tool calls were made, we're done
-            if not has_tool_calls:
-                print(f"No more tool calls needed. Completed in {iteration + 1} iterations.")
-                break
-
-            iteration += 1
-
-        # If we hit max iterations, get one final response
-        if iteration >= self.max_turns:
-            print(f"\nReached max iterations ({self.max_turns}). Getting final response...")
-            response = self.anthropic.messages.create(
-                model="claude-sonnet-4-20250514",
-                system=system_prompt,
-                max_tokens=16000,
-                messages=messages + [{"role": "user", "content": "Please provide a summary of what was accomplished."}],
-                # Don't provide tools for final summary to prevent more tool calls
-            )
-
-            for content in response.content:
-                if content.type == 'text':
-                    final_text.append(content.text)
-
-        return "\n".join(final_text)
+    async def cleanup(self):
+        await self.exit_stack.aclose()
 
     async def chat_loop(self):
         """Run an interactive chat loop"""
         print("\nMCP Client Started!")
         print("Type your queries or 'quit' to exit.")
-        print(f"Max iterations per query: {self.max_turns}")
-
-        # You can customize the system prompt here
-        system_prompt = """You are an AI assistant that can interact with Unity Engine through various tools. 
-You can create and manage GameObjects, scripts, scenes, assets, and more. When working with Unity:
-
-1. Always explain what you're doing step by step
-2. Use appropriate tools to accomplish tasks efficiently
-3. Provide clear feedback about the results of operations
-4. If errors occur, explain what went wrong and suggest solutions
-5. Be helpful and educational about Unity concepts when relevant
-
-Work methodically and use multiple tools in sequence when needed to complete complex tasks."""
 
         while True:
             try:
@@ -243,28 +198,23 @@ Work methodically and use multiple tools in sequence when needed to complete com
                 if query.lower() == 'quit':
                     break
 
-                response = await self.process_query(query, system_prompt)
-                print(f"\nFinal Response:\n{response}")
+                response = await self.process_query(query)
+                for message in response['messages']:
+                    print(message.content)
 
             except Exception as e:
                 print(f"\nError: {str(e)}")
-
-    async def cleanup(self):
-        """Clean up resources"""
-        await self.exit_stack.aclose()
 
 
 async def main():
     client = MCPClient()
     try:
-        await client.connect_to_server(UNITY_MCP_SERVER_DIR)
+        await client.initialize()
         await client.chat_loop()
     finally:
         await client.cleanup()
 
 
 if __name__ == "__main__":
-    import sys
-
     print("Running Client")
     asyncio.run(main())
