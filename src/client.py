@@ -14,26 +14,27 @@ from mcp.client.stdio import stdio_client
 from openai import AsyncOpenAI, OpenAI
 from pydantic import Field
 
-from config import UNITY_MCP_SERVER_DIR, MODEL_VENDOR, ZeroGConfig
+from config import get_config
 
 load_dotenv()
+cfg = get_config()
 
-def get_model(vendor=MODEL_VENDOR):
+def get_model(vendor=cfg.MODEL.vendor):
     match vendor:
         case "openai":
             return "openai:o4-mini"
         case "anthropic":
             return "anthropic:claude-sonnet-4-20250514"
         case "zerog":
-            return ZeroGChat(model=ZeroGConfig.MODEL_NAME, base_url=ZeroGConfig.MODEL_ENDPOINT)
+            return ZeroGChat(model=cfg.ZEROG.model_name, base_url=cfg.ZEROG.model_endpoint)
 
     raise ValueError("Invalid model")
 
 
 class ZGServiceClient:
     def __init__(self, url=None, provider_address=None):
-        self.url = url or ZeroGConfig.SERVICE_API_URL
-        self.provider_address = provider_address or ZeroGConfig.PROVIDER_ADDRESS
+        self.url = url or cfg.ZEROG.service_api_url
+        self.provider_address = provider_address or cfg.ZEROG.provider_address
         self.default_headers = {
             'Content-Type': 'application/json',
             'accept': 'application/json',
@@ -75,8 +76,8 @@ class ZeroGChat(ChatOpenAI):
     zg_client: Optional[ZGServiceClient] = Field(default=None, exclude=True)
 
     def __init__(self, zg_client: Optional[ZGServiceClient] = None, *args, **kwargs):
-        kwargs.setdefault('model_name', ZeroGConfig.MODEL_NAME)
-        kwargs.setdefault('base_url', ZeroGConfig.MODEL_ENDPOINT)
+        kwargs.setdefault('model_name', cfg.ZEROG.model_name)
+        kwargs.setdefault('base_url', cfg.ZEROG.model_endpoint)
         kwargs.setdefault('api_key', '')
 
         super().__init__(*args, **kwargs)
@@ -158,7 +159,7 @@ class MCPClient:
     async def initialize(self):
         server_params = StdioServerParameters(
             command="uv",
-            args=["--directory", UNITY_MCP_SERVER_DIR, "run", "server.py"],
+            args=["--directory", cfg.UNITY_MCP.server_dir, "run", "server.py"],
             env=None
         )
 
