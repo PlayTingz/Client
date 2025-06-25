@@ -7,7 +7,6 @@ from flask import (
 from markupsafe import Markup
 
 from client import MCPClient
-from config import UNITY_MCP_SERVER_DIR
 
 HomeBp = Blueprint('home', __name__, template_folder='templates')
 
