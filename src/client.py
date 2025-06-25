@@ -61,10 +61,10 @@ async def aget_headers(query: str):
 
 class DynamicHeaderChatOpenAI(ChatOpenAI):
     def _get_prompt_from_messages(self, messages: List[BaseMessage]) -> str:
-        last_message = next(message for message in reversed(messages) if isinstance(message, HumanMessage))
-        return str(last_message.content)
+        return ' '.join([str(message.content) for message in messages])
 
-    def _get_client(self, prompt):
+
+    def _get_sync_client(self, prompt):
         res = get_headers(prompt)
         if not res['success']:
             raise RuntimeError(f'Failed to get headers: {res["response"]}')
@@ -73,6 +73,20 @@ class DynamicHeaderChatOpenAI(ChatOpenAI):
         headers["Authorization"] = f"Bearer dummy-token"
 
         return OpenAI(
+            base_url="http://50.145.48.68:30081/v1/proxy",
+            api_key="",
+            default_headers=headers
+        )
+
+    async def _get_async_client(self, prompt):
+        res = await aget_headers(prompt)
+        if not res['success']:
+            raise RuntimeError(f'Failed to get headers: {res["response"]}')
+
+        headers = res['response']
+        headers["Authorization"] = f"Bearer dummy-token"
+
+        return AsyncOpenAI(
             base_url="http://50.145.48.68:30081/v1/proxy",
             api_key="",
             default_headers=headers
@@ -88,7 +102,7 @@ class DynamicHeaderChatOpenAI(ChatOpenAI):
         **kwargs: Any,
     ) -> Any:
         prompt = self._get_prompt_from_messages(messages)
-        self.client = self._get_client(prompt).chat.completions
+        self.client = self._get_sync_client(prompt).chat.completions
         return super()._generate(messages, stop=stop, **kwargs)
 
     async def _agenerate(
@@ -98,7 +112,8 @@ class DynamicHeaderChatOpenAI(ChatOpenAI):
         **kwargs: Any,
     ) -> Any:
         prompt = self._get_prompt_from_messages(messages)
-        self.client = self._get_client(prompt)
+        async_client = await self._get_async_client(prompt)
+        self.async_client = async_client.chat.completions
         return await super()._agenerate(messages, stop=stop, **kwargs)
 
 
@@ -107,7 +122,7 @@ model = DynamicHeaderChatOpenAI(
 )
 
 prompt = 'this is a test'
-client = model._get_client(prompt)
+client = model._get_sync_client(prompt)
 res = client.chat.completions.create(
     messages=[{'role': 'user', 'content': prompt}],
     model='phala/llama-3.3-70b-instruct',
@@ -115,6 +130,24 @@ res = client.chat.completions.create(
 
 model.invoke('This is a test')
 
+
+async def test_async_client():
+    """Test the async client functionality"""
+    prompt = 'this is test'
+
+    # Test raw async client
+    async_client = await model._get_async_client(prompt)
+    res = await async_client.chat.completions.create(
+        messages=[{'role': 'user', 'content': prompt}],
+        model='phala/llama-3.3-70b-instruct',
+    )
+    print("Async test result:", res.choices[0].message.content)
+
+    # Test async via model.ainvoke
+    async_result = await model.ainvoke('This is an async test')
+    print("Async ainvoke result:", async_result.content)
+
+asyncio.run(test_async_client())
 
 
 
@@ -176,13 +209,14 @@ class MCPClient:
                 print(f"\nError: {str(e)}")
 
 
-async def test():
+async def test(query):
     c = MCPClient(model=model)
     await c.initialize()
-    res = await c.process_query('This is a test')
+    res = await c.process_query(query)
     print(res)
+    await c.cleanup()
 
-asyncio.run(test())
+asyncio.run(test('Turn the player object red.'))
 
 async def main():
     client = MCPClient()
