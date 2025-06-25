@@ -1,10 +1,10 @@
 import logging
 
 import markdown
-from flask import (
+from markupsafe import Markup
+from quart import (
     Blueprint, flash, render_template, request
 )
-from markupsafe import Markup
 
 from client import MCPClient
 
@@ -15,7 +15,8 @@ async def index():
     data = None
 
     if request.method == 'POST':
-        prompt = request.form['prompt']
+        form = await request.form
+        prompt = form['prompt']
         mcp = MCPClient()
         try:
             await mcp.initialize()
@@ -25,8 +26,8 @@ async def index():
             data = {"prompt": prompt, "answer": html_answer}
         except Exception as e:
             logging.exception(e)
-            flash("Could not process query. Please try again at a later time.")
+            await flash("Could not process query. Please try again at a later time.")
         finally:
             await mcp.cleanup()
 
-    return render_template('welcome.html', data=data)
+    return await render_template('welcome.html', data=data)
