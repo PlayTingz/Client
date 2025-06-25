@@ -2,98 +2,127 @@ import asyncio
 from contextlib import AsyncExitStack
 from typing import List, Any, Optional
 
-import requests
 import httpx
-
-from langchain_openai import ChatOpenAI
-from openai import AsyncOpenAI, OpenAI
-
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, BaseMessage
 from langchain_mcp_adapters.tools import load_mcp_tools
+from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.prebuilt import create_react_agent
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from openai import AsyncOpenAI, OpenAI
+from pydantic import Field
 
-from config import UNITY_MCP_SERVER_DIR, get_model
-load_dotenv('src/.env')
-load_dotenv()  # load environment variables from .env
+from config import UNITY_MCP_SERVER_DIR, MODEL_VENDOR, ZeroGConfig
 
+load_dotenv()
 
-def get_headers(query: str):
-    headers = {
-        'Content-Type': 'application/json',
-        'accept': 'application/json',
-    }
-    url = 'http://localhost:4000/api/services/headers'
-    payload = {
-        'providerAddress': '0xf07240Efa67755B5311bc75784a061eDB47165Dd',
-        'query': query
-    }
-    res = requests.post(url, json=payload, headers=headers)
+def get_model(vendor=MODEL_VENDOR):
+    match vendor:
+        case "openai":
+            return "openai:o4-mini"
+        case "anthropic":
+            return "anthropic:claude-sonnet-4-20250514"
+        case "zerog":
+            return ZeroGChat(model=ZeroGConfig.MODEL_NAME, base_url=ZeroGConfig.MODEL_ENDPOINT)
 
-    if res.status_code == 200:
-        return res.json()
-    else:
-        return {'success': False, 'response': res.content}
+    raise ValueError("Invalid model")
 
 
-async def aget_headers(query: str):
-    headers = {
-        'Content-Type': 'application/json',
-        'accept': 'application/json',
-    }
-    url = 'http://localhost:4000/api/services/headers'
-    payload = {
-        'providerAddress': '0xf07240Efa67755B5311bc75784a061eDB47165Dd',
-        'query': query
-    }
+class ZGServiceClient:
+    def __init__(self, url=None, provider_address=None):
+        self.url = url or ZeroGConfig.SERVICE_API_URL
+        self.provider_address = provider_address or ZeroGConfig.PROVIDER_ADDRESS
+        self.default_headers = {
+            'Content-Type': 'application/json',
+            'accept': 'application/json',
+        }
 
-    async with httpx.AsyncClient() as client:
-        response = await client.post(url, json=payload, headers=headers)
+    def _build_request_params(self, query: str):
+        return {
+            'url': self.url,
+            'json': {
+                'providerAddress': self.provider_address,
+                'query': query
+            },
+            'headers': self.default_headers.copy()
+        }
 
+
+    def _process_response(self, response):
         if response.status_code == 200:
             return response.json()
         else:
             return {'success': False, 'response': response.content}
 
 
-class DynamicHeaderChatOpenAI(ChatOpenAI):
+    def get_headers(self, query: str):
+        params = self._build_request_params(query)
+        with httpx.Client() as client:
+            response = client.post(**params)
+            return self._process_response(response)
+
+
+    async def aget_headers(self, query: str):
+        params = self._build_request_params(query)
+        async with httpx.AsyncClient() as client:
+            response = await client.post(**params)
+            return self._process_response(response)
+
+
+class ZeroGChat(ChatOpenAI):
+    zg_client: Optional[ZGServiceClient] = Field(default=None, exclude=True)
+
+    def __init__(self, zg_client: Optional[ZGServiceClient] = None, *args, **kwargs):
+        kwargs.setdefault('model_name', ZeroGConfig.MODEL_NAME)
+        kwargs.setdefault('base_url', ZeroGConfig.MODEL_ENDPOINT)
+        kwargs.setdefault('api_key', '')
+
+        super().__init__(*args, **kwargs)
+
+        self.zg_client = zg_client or ZGServiceClient()
+
+
     def _get_prompt_from_messages(self, messages: List[BaseMessage]) -> str:
+        """Extract prompt string from messages."""
         return ' '.join([str(message.content) for message in messages])
 
 
-    def _get_sync_client(self, prompt):
-        res = get_headers(prompt)
-        if not res['success']:
-            raise RuntimeError(f'Failed to get headers: {res["response"]}')
+    def _process_headers_response(self, response):
+        """Process and validate headers response from ZeroG service."""
+        if not response.get('success', False):
+            error_msg = response.get('response', 'Unknown error')
+            raise RuntimeError(f'Failed to get headers: {error_msg}')
 
-        headers = res['response']
-        headers["Authorization"] = f"Bearer dummy-token"
+        headers = response['response'].copy()  # Don't mutate original
+        headers["Authorization"] = "Bearer dummy-token"
+        return headers
 
-        return OpenAI(
-            base_url="http://50.145.48.68:30081/v1/proxy",
-            api_key="",
+
+    def _create_openai_client(self, headers: dict, is_async: bool = False):
+        """Create OpenAI client with custom headers."""
+        client_class = AsyncOpenAI if is_async else OpenAI
+        return client_class(
+            base_url=self.openai_api_base,
+            api_key=self.openai_api_key,
             default_headers=headers
         )
 
-    async def _get_async_client(self, prompt):
-        res = await aget_headers(prompt)
-        if not res['success']:
-            raise RuntimeError(f'Failed to get headers: {res["response"]}')
 
-        headers = res['response']
-        headers["Authorization"] = f"Bearer dummy-token"
+    def _get_sync_client(self, prompt: str):
+        """Get synchronous OpenAI client with ZG headers."""
+        response = self.zg_client.get_headers(prompt)
+        headers = self._process_headers_response(response)
+        return self._create_openai_client(headers, is_async=False)
 
-        return AsyncOpenAI(
-            base_url="http://50.145.48.68:30081/v1/proxy",
-            api_key="",
-            default_headers=headers
-        )
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    async def _get_async_client(self, prompt: str):
+        """Get asynchronous OpenAI client with ZG headers."""
+        response = await self.zg_client.aget_headers(prompt)
+        headers = self._process_headers_response(response)
+        return self._create_openai_client(headers, is_async=True)
+
 
     def _generate(
         self,
@@ -102,8 +131,10 @@ class DynamicHeaderChatOpenAI(ChatOpenAI):
         **kwargs: Any,
     ) -> Any:
         prompt = self._get_prompt_from_messages(messages)
-        self.client = self._get_sync_client(prompt).chat.completions
+        client = self._get_sync_client(prompt)
+        self.client = client.chat.completions
         return super()._generate(messages, stop=stop, **kwargs)
+
 
     async def _agenerate(
         self,
@@ -112,51 +143,17 @@ class DynamicHeaderChatOpenAI(ChatOpenAI):
         **kwargs: Any,
     ) -> Any:
         prompt = self._get_prompt_from_messages(messages)
-        async_client = await self._get_async_client(prompt)
-        self.async_client = async_client.chat.completions
+        client = await self._get_async_client(prompt)
+        self.async_client = client.chat.completions
         return await super()._agenerate(messages, stop=stop, **kwargs)
 
 
-model = DynamicHeaderChatOpenAI(
-    model_name='phala/llama-3.3-70b-instruct'
-)
-
-prompt = 'this is a test'
-client = model._get_sync_client(prompt)
-res = client.chat.completions.create(
-    messages=[{'role': 'user', 'content': prompt}],
-    model='phala/llama-3.3-70b-instruct',
-)
-
-model.invoke('This is a test')
-
-
-async def test_async_client():
-    """Test the async client functionality"""
-    prompt = 'this is test'
-
-    # Test raw async client
-    async_client = await model._get_async_client(prompt)
-    res = await async_client.chat.completions.create(
-        messages=[{'role': 'user', 'content': prompt}],
-        model='phala/llama-3.3-70b-instruct',
-    )
-    print("Async test result:", res.choices[0].message.content)
-
-    # Test async via model.ainvoke
-    async_result = await model.ainvoke('This is an async test')
-    print("Async ainvoke result:", async_result.content)
-
-asyncio.run(test_async_client())
-
-
-
 class MCPClient:
-    def __init__(self, model):
+    def __init__(self):
         self.session = None
         self.agent = None
         self.exit_stack = AsyncExitStack()
-        self.model = model
+        self.model = get_model()
 
     async def initialize(self):
         server_params = StdioServerParameters(
@@ -208,15 +205,6 @@ class MCPClient:
             except Exception as e:
                 print(f"\nError: {str(e)}")
 
-
-async def test(query):
-    c = MCPClient(model=model)
-    await c.initialize()
-    res = await c.process_query(query)
-    print(res)
-    await c.cleanup()
-
-asyncio.run(test('Turn the player object red.'))
 
 async def main():
     client = MCPClient()
